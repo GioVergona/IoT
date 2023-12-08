@@ -84,12 +84,16 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+
+
     fun findBLEDevices(){
         bluetoothLeScanner = bluetoothAdapter?.bluetoothLeScanner
         val discoveredDevices = mutableListOf<BluetoothDevice>()
         var scanning = false
         val handler = Handler()
         val SCAN_PERIOD: Long = 10000
+
+        /*
         val leScanCallback = object : ScanCallback() {
             override fun onScanResult(callbackType: Int, result: ScanResult) {
                 val device = result.device
@@ -106,7 +110,7 @@ class MainActivity : ComponentActivity() {
                 // Handle scan failure here
             }
         }
-
+        */
         if (!scanning) { // Stops scanning after a pre-defined scan period.
             handler.postDelayed({
                 scanning = false
@@ -114,9 +118,11 @@ class MainActivity : ComponentActivity() {
                     ActivityCompat.requestPermissions(this,arrayOf(Manifest.permission.BLUETOOTH_SCAN),REQUEST_BLUETOOTH_SCAN_PERMISSION)
                 }
                 bluetoothLeScanner?.stopScan(leScanCallback)
+                /*
                 for (device in discoveredDevices){
                     println("Device Name: ${device.name}, Address: ${device.address}")
                 }
+                */
             }, SCAN_PERIOD)
             scanning = true
             bluetoothLeScanner?.startScan(leScanCallback)
@@ -125,6 +131,16 @@ class MainActivity : ComponentActivity() {
             bluetoothLeScanner?.stopScan(leScanCallback)
         }
 
+    }
+
+    private val leDeviceListAdapter = LeDeviceListAdapter(this)
+    // Device scan callback.
+    private val leScanCallback: ScanCallback = object : ScanCallback() {
+        override fun onScanResult(callbackType: Int, result: ScanResult) {
+            super.onScanResult(callbackType, result)
+            leDeviceListAdapter.addDevice(result.device)
+            leDeviceListAdapter.notifyDataSetChanged()
+        }
     }
 }
 
