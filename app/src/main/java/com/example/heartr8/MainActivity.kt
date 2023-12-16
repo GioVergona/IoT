@@ -27,6 +27,10 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.heartr8.ui.theme.HeartR8Theme
 import android.util.Log
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
 
 
 private const val REQUEST_ENABLE_BT = 1
@@ -98,24 +102,6 @@ class MainActivity : ComponentActivity() {
         val handler = Handler()
         val SCAN_PERIOD: Long = 10000
 
-        /*
-        val leScanCallback = object : ScanCallback() {
-            override fun onScanResult(callbackType: Int, result: ScanResult) {
-                val device = result.device
-                if (!discoveredDevices.contains(device)) {
-                    discoveredDevices.add(device)
-                }
-            }
-
-            override fun onBatchScanResults(results: List<ScanResult>) {
-                // Handle a batch of scan results here
-            }
-
-            override fun onScanFailed(errorCode: Int) {
-                // Handle scan failure here
-            }
-        }
-        */
         if (!scanning) { // Stops scanning after a pre-defined scan period.
 
             handler.postDelayed({
@@ -164,10 +150,19 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
+    Column (verticalArrangement = Arrangement.Center){
+        Text(
+            text = "Looking for the HeartR8 Device",
+            fontSize = 80.sp,
+            lineHeight = 80.sp,
+        )
+        Text(
+            text = "It will be just a second!",
+            fontSize = 40.sp,
+            lineHeight = 40.sp,
+            textAlign = TextAlign.End
+        )
+    }
 }
 
 @Preview(showBackground = true)

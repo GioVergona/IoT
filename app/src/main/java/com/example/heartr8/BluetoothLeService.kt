@@ -23,12 +23,29 @@ import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
+import com.example.heartr8.ui.theme.HeartR8Theme
+import kotlinx.coroutines.flow.MutableStateFlow
 import java.lang.Compiler.enable
 import java.util.UUID
 
-
+private val currentHeartRate = MutableStateFlow("0")
 private const val TAG = "BluetoothLeService"
 private val REQUEST_BLUETOOTH_CONNECT_PERMISSION = 1
 
@@ -277,7 +294,19 @@ class DeviceControlActivity : ComponentActivity() {
         )
         super.onCreate(savedInstanceState)
         deviceAddress =  intent.getStringExtra("deviceAddress").toString()
-        setContentView(R.layout.gatt_services_characteristics)
+        //setContentView(R.layout.gatt_services_characteristics)
+        setContent {
+            HeartR8Theme {
+                // A surface container using the 'background' color from the theme
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    CurrentHeartRate("0")
+                }
+            }
+        }
+
 
         val gattServiceIntent = Intent(this, BluetoothLeService::class.java)
         bindService(gattServiceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
@@ -303,6 +332,7 @@ class DeviceControlActivity : ComponentActivity() {
                 BluetoothLeService.ACTION_DATA_AVAILABLE -> {
                     // Show all the supported services and characteristics on the user interface.
                     Log.i(TAG, intent.getStringExtra("HeartRate").toString())
+                    currentHeartRate.value = intent.getStringExtra("HeartRate").toString()
                 }
             }
         }
@@ -396,5 +426,30 @@ object SampleGattAttributes {
             return defaultName
         }
         return name.toString()
+    }
+}
+
+@Composable
+fun CurrentHeartRate(name: String, modifier: Modifier = Modifier) {
+    val myCurrentHeartRate by currentHeartRate.collectAsState()
+    Column (verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally){
+        Text(
+            text = "Current Heart Rate",
+            fontSize = 30.sp,
+            lineHeight = 30.sp
+        )
+        Text(
+            text = myCurrentHeartRate,
+            fontSize = 80.sp,
+            lineHeight = 80.sp
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun HeartRatePreview() {
+    HeartR8Theme {
+        CurrentHeartRate("0")
     }
 }

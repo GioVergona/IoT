@@ -47,8 +47,6 @@ class LeDeviceListAdapter(private val context: Context) : BaseAdapter() {
 
         // Set data to the views
         val device = getItem(position) as BluetoothDevice
-        viewHolder.deviceName.text = getDeviceName(device) ?: "Unknown Device"
-        viewHolder.deviceAddress.text = device.address
 
         return view
     }
@@ -64,7 +62,5 @@ class LeDeviceListAdapter(private val context: Context) : BaseAdapter() {
 
     // ViewHolder pattern for better performance
     private class ViewHolder(view: View) {
-        val deviceName: TextView = view.findViewById(R.id.deviceName)
-        val deviceAddress: TextView = view.findViewById(R.id.deviceAddress)
     }
 }
