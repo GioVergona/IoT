@@ -7,8 +7,10 @@
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
+
     <!-- Choose one of the following location permissions -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:usesPermissionFlags="neverForLocation" android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <!-- If needed for Android 12 or higher, add BLUETOOTH_SCAN permission -->
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
@@ -37,6 +39,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".DeviceControlActivity">
+        </activity>
+        <service android:name=".BluetoothLeService" />
     </application>
 
 </manifest>

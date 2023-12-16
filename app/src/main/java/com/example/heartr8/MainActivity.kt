@@ -26,16 +26,19 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.heartr8.ui.theme.HeartR8Theme
+import android.util.Log
+
 
 private const val REQUEST_ENABLE_BT = 1
 private const val REQUEST_BLUETOOTH_PERMISSION = 2
-private const val REQUEST_BLUETOOTH_SCAN_PERMISSION = 3
+internal const val REQUEST_BLUETOOTH_SCAN_PERMISSION = 3
 
 class MainActivity : ComponentActivity() {
 
     private var bluetoothManager: BluetoothManager? = null
     private var bluetoothAdapter: BluetoothAdapter? = null
     private var bluetoothLeScanner: BluetoothLeScanner? = null
+    private val leDeviceListAdapter = LeDeviceListAdapter(this)
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,6 +64,8 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+
 
     fun setUpBluetooth(){
         if (bluetoothAdapter == null) {
@@ -112,11 +117,22 @@ class MainActivity : ComponentActivity() {
         }
         */
         if (!scanning) { // Stops scanning after a pre-defined scan period.
+
             handler.postDelayed({
                 scanning = false
                 if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
                     ActivityCompat.requestPermissions(this,arrayOf(Manifest.permission.BLUETOOTH_SCAN),REQUEST_BLUETOOTH_SCAN_PERMISSION)
                 }
+                val totalAmount = leDeviceListAdapter.getCount()
+
+                val intent = Intent(this, DeviceControlActivity::class.java)
+                intent.putExtra("deviceAddress", "EE:20:15:74:B1:61")
+                startActivity(intent)
+
+                for (i in 0 until totalAmount) {
+                    //leDeviceListAdapter.getItem(i).getAddress()
+                }
+
                 bluetoothLeScanner?.stopScan(leScanCallback)
                 /*
                 for (device in discoveredDevices){
@@ -133,9 +149,9 @@ class MainActivity : ComponentActivity() {
 
     }
 
-    private val leDeviceListAdapter = LeDeviceListAdapter(this)
     // Device scan callback.
     private val leScanCallback: ScanCallback = object : ScanCallback() {
+
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             super.onScanResult(callbackType, result)
             leDeviceListAdapter.addDevice(result.device)
