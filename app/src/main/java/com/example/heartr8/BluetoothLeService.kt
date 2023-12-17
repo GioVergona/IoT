@@ -53,13 +53,20 @@ import com.google.firebase.crashlytics.buildtools.reloc.org.apache.http.impl.cli
 import com.google.firebase.crashlytics.buildtools.reloc.org.apache.http.message.BasicNameValuePair
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.io.IOException
+import java.io.OutputStream
+import java.io.OutputStreamWriter
+import java.net.Socket
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 import java.util.concurrent.Executors
 
 
 private val currentHeartRate = MutableStateFlow("0")
+private val connectionState = MutableStateFlow("")
 private const val TAG = "BluetoothLeService"
 private val REQUEST_BLUETOOTH_CONNECT_PERMISSION = 1
+private var socket : Socket? = null
 
 class BluetoothLeService : Service() {
 
@@ -299,6 +306,8 @@ class DeviceControlActivity : ComponentActivity() {
         /*requestPermissions(this,
             arrayOf(Manifest.permission.BLUETOOTH_CONNECT),
             REQUEST_BLUETOOTH_CONNECT_PERMISSION)*/
+        createSocket()
+
         ActivityCompat.requestPermissions(
             this,
             arrayOf(Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH, Manifest.permission.ACCESS_COARSE_LOCATION),
@@ -347,7 +356,8 @@ class DeviceControlActivity : ComponentActivity() {
                     currentHeartRate.value = intent.getStringExtra("HeartRate").toString()
 
 
-                    sendToCloud(resources.getString(R.string.url), intent.getStringExtra("HeartRate").toString())
+                    sendToCloud(intent.getStringExtra("HeartRate").toString())
+
 
                     //val requestTask: RequestTask = RequestTask()
                     //requestTask.doInBackground(resources.getString(R.string.url), intent.getStringExtra("HeartRate").toString(),)
@@ -357,6 +367,83 @@ class DeviceControlActivity : ComponentActivity() {
         }
     }
 
+    private fun createSocket () {
+        val port = resources.getString(R.string.port).toInt()
+        val ip = resources.getString(R.string.ip)  // Aquí debes colocar la IP del servidor
+
+
+
+        val executor = Executors.newSingleThreadExecutor()
+        val handler = Handler(Looper.getMainLooper())
+        executor.execute {
+            try {
+                socket = Socket(ip, port)
+                connectionState.value = "Data is Being Send"
+
+            } catch (closeException: Throwable) {
+                Log.e(TAG, closeException.toString())
+                connectionState.value = "Connection Not Available"
+            }
+
+            handler.post {
+            }
+        }
+    }
+
+    private fun sendToCloud (heartRate: String) {
+
+        // Obtiene la hora actual en un formato legible por humanos
+        val now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"))
+
+        // Crea un mapa para almacenar los datos
+        val data = mapOf(
+            "time" to now,
+            "sensor" to heartRate
+        )
+
+        // Convierte el mapa a formato JSON
+        val jsonData = data.toJson()
+
+
+        val executor = Executors.newSingleThreadExecutor()
+        val handler = Handler(Looper.getMainLooper())
+        executor.execute {
+            try {
+
+                val outputStream: OutputStream = socket!!.getOutputStream()
+                val writer = OutputStreamWriter(outputStream, Charsets.UTF_8)
+
+                // Envía los datos codificados como bytes al servidor
+                writer.write(jsonData)
+                writer.flush()
+
+                handler.post {
+
+                }
+            } catch (closeException: Throwable) {
+                    Log.e(TAG, closeException.toString())
+            }
+
+        }
+
+        // Creación del socket y conexión
+
+    }
+    fun Map<*,*>.toJson(): String {
+        val entries = this.entries.joinToString(",") { "\"${it.key.toString()}\":${toJsonValue(it.value)}" }
+        return "{$entries}"
+    }
+
+    // Función auxiliar para convertir valores a formato JSON
+    private fun toJsonValue(value: Any?): String {
+        return when (value) {
+            is String -> "\"$value\""
+            is Map<*,*> -> value.toJson()
+            else -> value.toString()
+        }
+    }
+
+/*
     private fun sendToCloud (uri: String, heartRate: String) {
         val executor = Executors.newSingleThreadExecutor()
         val handler = Handler(Looper.getMainLooper())
@@ -365,6 +452,7 @@ class DeviceControlActivity : ComponentActivity() {
             val postParams: MutableList<BasicNameValuePair> = mutableListOf()
 
             postParams.add(BasicNameValuePair("CurrentHeartRate", heartRate))
+            postParams.add(BasicNameValuePair("Time", heartRate))
 
             httpPost.entity = UrlEncodedFormEntity(postParams)
 
@@ -390,7 +478,7 @@ class DeviceControlActivity : ComponentActivity() {
 
             }
         }
-    }
+    }*/
 
     private fun displayGattServices(supportedGattServices: List<BluetoothGattService?>?): BluetoothGattCharacteristic? {
         if (supportedGattServices == null) return null
@@ -486,6 +574,7 @@ object SampleGattAttributes {
 @Composable
 fun CurrentHeartRate(name: String, modifier: Modifier = Modifier) {
     val myCurrentHeartRate by currentHeartRate.collectAsState()
+    val myConnectionState by connectionState.collectAsState()
     Column (verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally){
         Text(
             text = "Current Heart Rate",
@@ -496,6 +585,11 @@ fun CurrentHeartRate(name: String, modifier: Modifier = Modifier) {
             text = myCurrentHeartRate,
             fontSize = 80.sp,
             lineHeight = 80.sp
+        )
+        Text(
+            text = myConnectionState,
+            fontSize = 20.sp,
+            lineHeight = 20.sp
         )
     }
 }
