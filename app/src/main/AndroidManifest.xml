@@ -15,6 +15,9 @@
     <!-- If needed for Android 12 or higher, add BLUETOOTH_SCAN permission -->
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
 
+    <!-- Internet Permissions -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- If the app relies on BLE -->
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true"/>
 

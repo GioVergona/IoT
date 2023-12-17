@@ -1,6 +1,7 @@
 package com.example.heartr8
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
@@ -8,6 +9,7 @@ import android.bluetooth.BluetoothManager
 import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
+import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -31,6 +33,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
+import com.google.firebase.crashlytics.buildtools.reloc.org.apache.http.message.BasicNameValuePair
 
 
 private const val REQUEST_ENABLE_BT = 1
@@ -42,7 +45,8 @@ class MainActivity : ComponentActivity() {
     private var bluetoothManager: BluetoothManager? = null
     private var bluetoothAdapter: BluetoothAdapter? = null
     private var bluetoothLeScanner: BluetoothLeScanner? = null
-    private val leDeviceListAdapter = LeDeviceListAdapter(this)
+    private val leDeviceListAdapter: MutableList<BluetoothDevice> = mutableListOf()
+    private var hasFound : Boolean = false
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -95,37 +99,15 @@ class MainActivity : ComponentActivity() {
 
 
 
+    @SuppressLint("MissingPermission")
     fun findBLEDevices(){
         bluetoothLeScanner = bluetoothAdapter?.bluetoothLeScanner
         val discoveredDevices = mutableListOf<BluetoothDevice>()
         var scanning = false
-        val handler = Handler()
-        val SCAN_PERIOD: Long = 10000
 
         if (!scanning) { // Stops scanning after a pre-defined scan period.
+            scanning = watchForConnections(scanning)
 
-            handler.postDelayed({
-                scanning = false
-                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
-                    ActivityCompat.requestPermissions(this,arrayOf(Manifest.permission.BLUETOOTH_SCAN),REQUEST_BLUETOOTH_SCAN_PERMISSION)
-                }
-                val totalAmount = leDeviceListAdapter.getCount()
-
-                val intent = Intent(this, DeviceControlActivity::class.java)
-                intent.putExtra("deviceAddress", "EE:20:15:74:B1:61")
-                startActivity(intent)
-
-                for (i in 0 until totalAmount) {
-                    //leDeviceListAdapter.getItem(i).getAddress()
-                }
-
-                bluetoothLeScanner?.stopScan(leScanCallback)
-                /*
-                for (device in discoveredDevices){
-                    println("Device Name: ${device.name}, Address: ${device.address}")
-                }
-                */
-            }, SCAN_PERIOD)
             scanning = true
             bluetoothLeScanner?.startScan(leScanCallback)
         } else {
@@ -134,14 +116,57 @@ class MainActivity : ComponentActivity() {
         }
 
     }
+    fun watchForConnections(scanning : Boolean) : Boolean {
+
+        val SCAN_PERIOD: Long = 5000
+        val handler = Handler()
+        var scanning = scanning
+        handler.postDelayed({
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this,arrayOf(Manifest.permission.BLUETOOTH_SCAN),REQUEST_BLUETOOTH_SCAN_PERMISSION)
+            }
+            val totalAmount = leDeviceListAdapter.size
+            hasFound = false
+            var name : String?
+            for (i in 0 until totalAmount) {
+                name = leDeviceListAdapter[i].name
+                if (name == "HeartR8") {
+                    Log.d(TAG, leDeviceListAdapter[i].name)
+                    Log.d(TAG, leDeviceListAdapter[i].getAddress())
+                    scanning = false
+                    hasFound = true
+                    val intent = Intent(this, DeviceControlActivity::class.java)
+                    intent.putExtra("deviceAddress", "EE:20:15:74:B1:61")
+                    startActivity(intent)
+                    break
+                }
+            }
+            if (!hasFound) {
+                leDeviceListAdapter.clear()
+                watchForConnections(scanning)
+            }else {
+                bluetoothLeScanner?.stopScan(leScanCallback)
+            }
+
+
+
+
+            /*
+            for (device in discoveredDevices){
+                println("Device Name: ${device.name}, Address: ${device.address}")
+            }
+            */
+        }, SCAN_PERIOD)
+
+        return scanning
+    }
 
     // Device scan callback.
     private val leScanCallback: ScanCallback = object : ScanCallback() {
 
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             super.onScanResult(callbackType, result)
-            leDeviceListAdapter.addDevice(result.device)
-            leDeviceListAdapter.notifyDataSetChanged()
+            leDeviceListAdapter.add(result.device)
         }
     }
 }

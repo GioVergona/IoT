@@ -12,15 +12,17 @@ import android.bluetooth.BluetoothGattService
 import android.bluetooth.BluetoothProfile
 import android.content.BroadcastReceiver
 import android.content.ComponentName
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
-import android.nfc.NfcAdapter.EXTRA_DATA
 import android.os.Binder
 import android.os.Bundle
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -36,14 +38,24 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import com.example.heartr8.ui.theme.HeartR8Theme
+import com.google.firebase.crashlytics.buildtools.reloc.org.apache.http.HttpResponse
+import com.google.firebase.crashlytics.buildtools.reloc.org.apache.http.HttpStatus
+import com.google.firebase.crashlytics.buildtools.reloc.org.apache.http.StatusLine
+import com.google.firebase.crashlytics.buildtools.reloc.org.apache.http.client.ClientProtocolException
+import com.google.firebase.crashlytics.buildtools.reloc.org.apache.http.client.HttpClient
+import com.google.firebase.crashlytics.buildtools.reloc.org.apache.http.client.entity.UrlEncodedFormEntity
+import com.google.firebase.crashlytics.buildtools.reloc.org.apache.http.client.methods.HttpPost
+import com.google.firebase.crashlytics.buildtools.reloc.org.apache.http.impl.client.DefaultHttpClient
+import com.google.firebase.crashlytics.buildtools.reloc.org.apache.http.message.BasicNameValuePair
 import kotlinx.coroutines.flow.MutableStateFlow
-import java.lang.Compiler.enable
+import java.io.IOException
 import java.util.UUID
+import java.util.concurrent.Executors
+
 
 private val currentHeartRate = MutableStateFlow("0")
 private const val TAG = "BluetoothLeService"
@@ -333,7 +345,49 @@ class DeviceControlActivity : ComponentActivity() {
                     // Show all the supported services and characteristics on the user interface.
                     Log.i(TAG, intent.getStringExtra("HeartRate").toString())
                     currentHeartRate.value = intent.getStringExtra("HeartRate").toString()
+
+
+                    sendToCloud(resources.getString(R.string.url), intent.getStringExtra("HeartRate").toString())
+
+                    //val requestTask: RequestTask = RequestTask()
+                    //requestTask.doInBackground(resources.getString(R.string.url), intent.getStringExtra("HeartRate").toString(),)
+
                 }
+            }
+        }
+    }
+
+    private fun sendToCloud (uri: String, heartRate: String) {
+        val executor = Executors.newSingleThreadExecutor()
+        val handler = Handler(Looper.getMainLooper())
+        executor.execute {
+            val httpPost: HttpPost = HttpPost(uri)
+            val postParams: MutableList<BasicNameValuePair> = mutableListOf()
+
+            postParams.add(BasicNameValuePair("CurrentHeartRate", heartRate))
+
+            httpPost.entity = UrlEncodedFormEntity(postParams)
+
+            val httpclient: HttpClient = DefaultHttpClient()
+            val response: HttpResponse
+            var responseString: String? = null
+            try {
+                response = httpclient.execute(httpPost)
+                val statusLine: StatusLine = response.getStatusLine()
+                if (statusLine.getStatusCode() === HttpStatus.SC_OK) {
+                    Log.d(ContentValues.TAG, "It has been received")
+                } else {
+                    //Closes the connection.
+                    response.getEntity().getContent().close()
+                    Log.d(ContentValues.TAG, "Something went wrong")
+                }
+            } catch (e: ClientProtocolException) {
+                Log.e(TAG, "ClientProtocolException")
+            } catch (e: IOException) {
+                Log.e(TAG, "IOException")
+            }
+            handler.post {
+
             }
         }
     }
